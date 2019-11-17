@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -48,9 +47,8 @@ to quickly create a Cobra application.`,
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		path := args[0]
-		commandStr := args[1]
-		command := strings.Split(commandStr, " ")[0]
-		arg := strings.Split(commandStr, " ")[1:]
+		command := args[1]
+		arg := args[2:]
 
 		if err := watcher.Watch(path, command, arg); err != nil {
 			fmt.Println(err)
