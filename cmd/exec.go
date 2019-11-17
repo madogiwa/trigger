@@ -16,14 +16,20 @@ limitations under the License.
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 
 	"github.com/spf13/cobra"
+	"github.com/madogiwa/trigger/watcher"
 )
 
 // execCmd represents the exec command
 var execCmd = &cobra.Command{
-	Use:   "exec",
+	Use:   "exec [path] [command]",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -31,8 +37,35 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) < 1 {
+			return errors.New("requires path argument")
+		}
+		if len(args) < 2 {
+			return errors.New("requires command argument")
+		}
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("exec called")
+		path := args[0]
+		commandStr := args[1]
+		command := strings.Split(commandStr, " ")[0]
+		arg := strings.Split(commandStr, " ")[1:]
+
+		if err := watcher.Watch(path, command, arg); err != nil {
+			fmt.Println(err)
+			os.Exit(2)
+		}
+
+		fmt.Printf("watching for changes in %s ...\n", path)
+		watcher.Start()
+
+		exitSignal := make(chan os.Signal)
+		signal.Notify(exitSignal, syscall.SIGINT, syscall.SIGTERM)
+		<-exitSignal
+
+		fmt.Println("shutdown...", command, path)
+		watcher.Stop()
 	},
 }
 
